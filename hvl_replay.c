@@ -1013,12 +1013,12 @@ void hvl_process_stepfx_3( struct hvl_tune *ht, struct hvl_voice *voice, int32 F
       switch( FXParam >> 4 )
       {
         case 0x1: // Fineslide up
-          voice->vc_PeriodSlidePeriod = -(FXParam & 0x0f);
+          voice->vc_PeriodSlidePeriod -= (FXParam & 0x0f);
           voice->vc_PlantPeriod = 1;
           break;
         
         case 0x2: // Fineslide down
-          voice->vc_PeriodSlidePeriod = (FXParam & 0x0f);
+          voice->vc_PeriodSlidePeriod += (FXParam & 0x0f);
           voice->vc_PlantPeriod = 1;
           break;
         
