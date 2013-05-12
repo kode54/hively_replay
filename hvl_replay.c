@@ -6,6 +6,8 @@
 ** Changes for 1.5 are marked also.
 **
 ** ... as are those for 1.6
+**
+** ... and for 1.8
 */
 
 
@@ -584,7 +586,7 @@ struct hvl_tune *hvl_load_ahx( uint8 *buf, uint32 buflen, uint32 defstereo, uint
       if( ( buf[3] == 0 ) && ( l == 4 ) && ( (bptr[2]&0xf0) != 0 ) )
         ht->ht_Instruments[i].ins_PList.pls_Entries[j].ple_FXParam[0] &= 0x0f;
       if( ( buf[3] == 0 ) && ( k == 4 ) && ( (bptr[3]&0xf0) != 0 ) )
-        ht->ht_Instruments[i].ins_PList.pls_Entries[j].ple_FXParam[1] &= 0x0f;
+        ht->ht_Instruments[i].ins_PList.pls_Entries[j].ple_FXParam[1] &= 0x0f; // 1.8
 
       bptr += 4;
     }
@@ -933,7 +935,7 @@ void hvl_process_stepfx_2( struct hvl_tune *ht, struct hvl_voice *voice, int32 F
   {
     case 0x9: // Set squarewave offset
       voice->vc_SquarePos    = FXParam >> (5 - voice->vc_WaveLength);
-      voice->vc_PlantSquare  = 1;
+//      voice->vc_PlantSquare  = 1;
       voice->vc_IgnoreSquare = 1;
       break;
     
@@ -1013,12 +1015,12 @@ void hvl_process_stepfx_3( struct hvl_tune *ht, struct hvl_voice *voice, int32 F
       switch( FXParam >> 4 )
       {
         case 0x1: // Fineslide up
-          voice->vc_PeriodSlidePeriod -= (FXParam & 0x0f);
+          voice->vc_PeriodSlidePeriod -= (FXParam & 0x0f); // 1.8
           voice->vc_PlantPeriod = 1;
           break;
         
         case 0x2: // Fineslide down
-          voice->vc_PeriodSlidePeriod += (FXParam & 0x0f);
+          voice->vc_PeriodSlidePeriod += (FXParam & 0x0f); // 1.8
           voice->vc_PlantPeriod = 1;
           break;
         
@@ -1993,22 +1995,27 @@ void hvl_mixchunk( struct hvl_tune *ht, uint32 samples, int8 *buf1, int8 *buf2, 
         rclock = last_clock[i][1];
 		current_clock = clock;
 		if( rsrc[i] && rclock < clock ) current_clock = rclock;
-		while (current_clock < target_clock)
+		while( current_clock < target_clock )
 		{
-		  clock += delta[i];
-		  next_clock = clock;
-          if( rsrc[i] )
+		  next_clock = clock + delta[i];
+		  if( rsrc[i] && rclock + rdelta[i] < next_clock )
+			next_clock = rclock + rdelta[i];
+		  j = src[i][pos[i]];
+		  if( clock < next_clock )
+		  {
+			clock += delta[i];
+			pos[i] = (pos[i] + 1) % 0x280;
+		  }
+		  if( rsrc[i] )
           {
-			rclock += rdelta[i];
-		    if( rclock < next_clock ) next_clock = rclock;
-            /* Ring Modulation */
-            j = ((src[i][pos[i]]*rsrc[i][rpos[i]])>>7)*vol[i];
-			if( rclock == next_clock ) rpos[i] = (rpos[i] + 1) % 0x280;
-          } else {
-            j = src[i][pos[i]]*vol[i];
+			j = (j*rsrc[i][rpos[i]])>>7;
+			if( rclock < next_clock )
+			{
+			  rclock += rdelta[i];
+			  rpos[i] = (rpos[i] + 1) % 0x280;
+			}
           }
-        
-		  if( clock == next_clock ) pos[i] = (pos[i] + 1) % 0x280;
+		  j *= vol[i];
 
 //        if( abs( j ) > vu[i] ) vu[i] = abs( j );
 
@@ -2062,8 +2069,8 @@ void hvl_DecodeFrame( struct hvl_tune *ht, int8 *buf1, int8 *buf2, int32 bufmod 
   {
     hvl_play_irq( ht );
     hvl_mixchunk( ht, samples, buf1, buf2, bufmod );
-    buf1 += samples * 8;
-    buf2 += samples * 8;
+    buf1 += samples * bufmod;
+    buf2 += samples * bufmod;
     loops--;
   } while( loops );
 }
