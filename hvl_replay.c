@@ -18,6 +18,9 @@
 
 #include "hvl_replay.h"
 
+#undef min
+#define min(a,b) (((a) < (b)) ? (a) : (b))
+
 const int32 stereopan_left[]  = { 128,  96,  64,  32,   0 };
 const int32 stereopan_right[] = { 128, 160, 193, 225, 255 };
 
@@ -300,8 +303,8 @@ void hvl_reset_some_stuff( struct hvl_tune *ht )
 	ht->ht_Voices[i].vc_LastClock[1]      = 0;
   }
 
-  blip_clear(ht->ht_BlipBuffers[0]);
-  blip_clear(ht->ht_BlipBuffers[1]);
+  hvl_blip_clear(ht->ht_BlipBuffers[0]);
+  hvl_blip_clear(ht->ht_BlipBuffers[1]);
 }
 
 BOOL hvl_InitSubsong( struct hvl_tune *ht, uint32 nr )
@@ -394,7 +397,7 @@ struct hvl_tune *hvl_load_ahx( uint8 *buf, uint32 buflen, uint32 defstereo, uint
   hs += sizeof( struct hvl_position ) * posn;
   hs += sizeof( struct hvl_instrument ) * (insn+1);
   hs += sizeof( uint16 ) * ssn;
-  hs += blip_size( 256 ) * 2;
+  hs += hvl_blip_size( 256 ) * 2;
 
   // Calculate the size of all instrument PList buffers
   bptr = &buf[14];
@@ -425,14 +428,14 @@ struct hvl_tune *hvl_load_ahx( uint8 *buf, uint32 buflen, uint32 defstereo, uint
   ht->ht_Positions      = (struct hvl_position *)(&ht[1]);
   ht->ht_Instruments    = (struct hvl_instrument *)(&ht->ht_Positions[posn]);
   ht->ht_Subsongs       = (uint16 *)(&ht->ht_Instruments[(insn+1)]);
-  ht->ht_BlipBuffers[0] = (blip_t *)(&ht->ht_Subsongs[ssn]);
-  ht->ht_BlipBuffers[1] = (blip_t *)((uint8 *)(ht->ht_BlipBuffers[0]) + blip_size(256));
-  ple                   = (struct hvl_plsentry *)(((uint8 *)ht->ht_BlipBuffers[1]) + blip_size(256));
+  ht->ht_BlipBuffers[0] = (hvl_blip_t *)(&ht->ht_Subsongs[ssn]);
+  ht->ht_BlipBuffers[1] = (hvl_blip_t *)((uint8 *)(ht->ht_BlipBuffers[0]) + hvl_blip_size(256));
+  ple                   = (struct hvl_plsentry *)(((uint8 *)ht->ht_BlipBuffers[1]) + hvl_blip_size(256));
 
-  blip_new_inplace(ht->ht_BlipBuffers[0], 256);
-  blip_new_inplace(ht->ht_BlipBuffers[1], 256);
-  blip_set_rates(ht->ht_BlipBuffers[0], 65536, 1);
-  blip_set_rates(ht->ht_BlipBuffers[1], 65536, 1);
+  hvl_blip_new_inplace(ht->ht_BlipBuffers[0], 256);
+  hvl_blip_new_inplace(ht->ht_BlipBuffers[1], 256);
+  hvl_blip_set_rates(ht->ht_BlipBuffers[0], 65536, 1);
+  hvl_blip_set_rates(ht->ht_BlipBuffers[1], 65536, 1);
 
   ht->ht_WaveformTab[0]  = &waves[WO_TRIANGLE_04];
   ht->ht_WaveformTab[1]  = &waves[WO_SAWTOOTH_04];
@@ -596,7 +599,7 @@ struct hvl_tune *hvl_load_ahx( uint8 *buf, uint32 buflen, uint32 defstereo, uint
   return ht;
 }
 
-struct hvl_tune *hvl_LoadTune( uint8 *buf, uint32 buflen, uint32 freq, uint32 defstereo )
+struct hvl_tune *hvl_LoadTune( const uint8 *buf, uint32 buflen, uint32 freq, uint32 defstereo )
 {
   struct hvl_tune *ht;
   uint8  *bptr;
@@ -636,7 +639,7 @@ struct hvl_tune *hvl_LoadTune( uint8 *buf, uint32 buflen, uint32 freq, uint32 de
   hs += sizeof( struct hvl_position ) * posn;
   hs += sizeof( struct hvl_instrument ) * (insn+1);
   hs += sizeof( uint16 ) * ssn;
-  hs += blip_size(256) * 2;
+  hs += hvl_blip_size(256) * 2;
 
   // Calculate the size of all instrument PList buffers
   bptr = &buf[16];
@@ -684,14 +687,14 @@ struct hvl_tune *hvl_LoadTune( uint8 *buf, uint32 buflen, uint32 freq, uint32 de
   ht->ht_Positions       = (struct hvl_position *)(&ht[1]);
   ht->ht_Instruments     = (struct hvl_instrument *)(&ht->ht_Positions[posn]);
   ht->ht_Subsongs        = (uint16 *)(&ht->ht_Instruments[(insn+1)]);
-  ht->ht_BlipBuffers[0]  = (blip_t *)(&ht->ht_Subsongs[ssn]);
-  ht->ht_BlipBuffers[1]  = (blip_t *)(((uint8 *)ht->ht_BlipBuffers[0]) + blip_size(256));
-  ple                    = (struct hvl_plsentry *)(((uint8 *)ht->ht_BlipBuffers[1]) + blip_size(256));
+  ht->ht_BlipBuffers[0]  = (hvl_blip_t *)(&ht->ht_Subsongs[ssn]);
+  ht->ht_BlipBuffers[1]  = (hvl_blip_t *)(((uint8 *)ht->ht_BlipBuffers[0]) + hvl_blip_size(256));
+  ple                    = (struct hvl_plsentry *)(((uint8 *)ht->ht_BlipBuffers[1]) + hvl_blip_size(256));
 
-  blip_new_inplace(ht->ht_BlipBuffers[0], 256);
-  blip_new_inplace(ht->ht_BlipBuffers[1], 256);
-  blip_set_rates(ht->ht_BlipBuffers[0], 65536, 1);
-  blip_set_rates(ht->ht_BlipBuffers[1], 65536, 1);
+  hvl_blip_new_inplace(ht->ht_BlipBuffers[0], 256);
+  hvl_blip_new_inplace(ht->ht_BlipBuffers[1], 256);
+  hvl_blip_set_rates(ht->ht_BlipBuffers[0], 65536, 1);
+  hvl_blip_set_rates(ht->ht_BlipBuffers[1], 65536, 1);
 
   ht->ht_WaveformTab[0]  = &waves[WO_TRIANGLE_04];
   ht->ht_WaveformTab[1]  = &waves[WO_SAWTOOTH_04];
@@ -2023,8 +2026,8 @@ void hvl_mixchunk( struct hvl_tune *ht, uint32 samples, int8 *buf1, int8 *buf2, 
           blip_deltar = ((j * panr[i]) >> 7) - last_ampr;
 		  last_ampl += blip_deltal;
 		  last_ampr += blip_deltar;
-		  if( blip_deltal ) blip_add_delta( ht->ht_BlipBuffers[0], current_clock, blip_deltal );
-		  if( blip_deltar ) blip_add_delta( ht->ht_BlipBuffers[1], current_clock, blip_deltar );
+          if( blip_deltal ) hvl_blip_add_delta( ht->ht_BlipBuffers[0], current_clock, blip_deltal );
+          if( blip_deltar ) hvl_blip_add_delta( ht->ht_BlipBuffers[1], current_clock, blip_deltar );
 
 		  current_clock = next_clock;
 		}
@@ -2036,11 +2039,11 @@ void hvl_mixchunk( struct hvl_tune *ht, uint32 samples, int8 *buf1, int8 *buf2, 
 		last_amp[i][1] = last_ampr;
       }
 
-	  blip_end_frame( ht->ht_BlipBuffers[0], target_clock );
-	  blip_end_frame( ht->ht_BlipBuffers[1], target_clock );
+      hvl_blip_end_frame( ht->ht_BlipBuffers[0], target_clock );
+      hvl_blip_end_frame( ht->ht_BlipBuffers[1], target_clock );
 
-	  blip_read_samples( ht->ht_BlipBuffers[0], (int*)buf1, loops, ht->ht_mixgain );
-	  blip_read_samples( ht->ht_BlipBuffers[1], (int*)buf2, loops, ht->ht_mixgain );
+      hvl_blip_read_samples( ht->ht_BlipBuffers[0], (int*)buf1, loops, ht->ht_mixgain );
+      hvl_blip_read_samples( ht->ht_BlipBuffers[1], (int*)buf2, loops, ht->ht_mixgain );
 
 	  buf1 += bufmod * loops;
 	  buf2 += bufmod * loops;

@@ -216,7 +216,7 @@ struct hvl_tune
   struct hvl_step        ht_Tracks[256][64];
   struct hvl_instrument *ht_Instruments;
   struct hvl_voice       ht_Voices[MAX_CHANNELS];
-  blip_t                *ht_BlipBuffers[2];
+  hvl_blip_t            *ht_BlipBuffers[2];
   int32                  ht_defstereo;
   int32                  ht_defpanleft;
   int32                  ht_defpanright;
@@ -227,7 +227,7 @@ struct hvl_tune
 void hvl_DecodeFrame( struct hvl_tune *ht, int8 *buf1, int8 *buf2, int32 bufmod );
 void hvl_InitReplayer( void );
 BOOL hvl_InitSubsong( struct hvl_tune *ht, uint32 nr );
-struct hvl_tune *hvl_LoadTune( uint8 *buf, uint32 buflen, uint32 freq, uint32 defstereo );
+struct hvl_tune *hvl_LoadTune( const uint8 *buf, uint32 buflen, uint32 freq, uint32 defstereo );
 void hvl_FreeTune( struct hvl_tune *ht );
 
 void hvl_play_irq( struct hvl_tune *ht );

@@ -60,7 +60,7 @@ increased by decreasing time_bits, which would reduce resample ratio accuracy.
 
 /** Sample buffer that resamples to output rate and accumulates samples
 until they're read out */
-struct blip_t
+struct hvl_blip_t
 {
 	fixed_t factor;
 	fixed_t offset;
@@ -105,30 +105,30 @@ static void check_assumptions( void )
 	CLAMP( n );
 	assert( n == min_sample );
 	
-	assert( blip_max_ratio <= time_unit );
-	assert( blip_max_frame <= (fixed_t) -1 >> time_bits );
+    assert( hvl_blip_max_ratio <= time_unit );
+    assert( hvl_blip_max_frame <= (fixed_t) -1 >> time_bits );
 }
 
-size_t blip_size( int size )
+size_t hvl_blip_size( int size )
 {
 	assert( size >= 0 );
-	return sizeof (blip_t) + (size + buf_extra) * sizeof (buf_t);
+    return sizeof (hvl_blip_t) + (size + buf_extra) * sizeof (buf_t);
 }
 
-void blip_new_inplace( blip_t* m, int size )
+void hvl_blip_new_inplace( hvl_blip_t* m, int size )
 {
 	assert( size >= 0 );
 	
 	if ( m )
 	{
-		m->factor = time_unit / blip_max_ratio;
+        m->factor = time_unit / hvl_blip_max_ratio;
 		m->size   = size;
-		blip_clear( m );
+        hvl_blip_clear( m );
 		check_assumptions();
 	}
 }
 
-void blip_set_rates( blip_t* m, double clock_rate, double sample_rate )
+void hvl_blip_set_rates( hvl_blip_t* m, double clock_rate, double sample_rate )
 {
 	double factor = time_unit * sample_rate / clock_rate;
 	m->factor = (fixed_t) factor;
@@ -145,7 +145,7 @@ void blip_set_rates( blip_t* m, double clock_rate, double sample_rate )
 	have been rounded down in the floating-point calculation. */
 }
 
-void blip_clear( blip_t* m )
+void hvl_blip_clear( hvl_blip_t* m )
 {
 	/* We could set offset to 0, factor/2, or factor-1. 0 is suitable if
 	factor is rounded up. factor-1 is suitable if factor is rounded down.
@@ -159,7 +159,7 @@ void blip_clear( blip_t* m )
 	memset( SAMPLES( m ), 0, (m->size + buf_extra) * sizeof (buf_t) );
 }
 
-int blip_clocks_needed( const blip_t* m, int samples )
+int hvl_blip_clocks_needed( const hvl_blip_t* m, int samples )
 {
 	fixed_t needed;
 	
@@ -173,7 +173,7 @@ int blip_clocks_needed( const blip_t* m, int samples )
 	return (needed - m->offset + m->factor - 1) / m->factor;
 }
 
-void blip_end_frame( blip_t* m, unsigned t )
+void hvl_blip_end_frame( hvl_blip_t* m, unsigned t )
 {
 	fixed_t off = t * m->factor + m->offset;
 	m->avail += off >> time_bits;
@@ -183,12 +183,12 @@ void blip_end_frame( blip_t* m, unsigned t )
 	assert( m->avail <= m->size );
 }
 
-int blip_samples_avail( const blip_t* m )
+int hvl_blip_samples_avail( const hvl_blip_t* m )
 {
 	return m->avail;
 }
 
-static void remove_samples( blip_t* m, int count )
+static void remove_samples( hvl_blip_t* m, int count )
 {
 	buf_t* buf = SAMPLES( m );
 	int remain = m->avail + buf_extra - count;
@@ -198,7 +198,7 @@ static void remove_samples( blip_t* m, int count )
 	memset( &buf [remain], 0, count * sizeof buf [0] );
 }
 
-int blip_read_samples( blip_t* m, int out [], int count, int gain )
+int hvl_blip_read_samples( hvl_blip_t* m, int out [], int count, int gain )
 {
 	assert( count >= 0 );
 	
@@ -281,7 +281,7 @@ possibly-wider fixed_t. On 32-bit platforms, this is likely more efficient.
 And by having pre_shift 32, a 32-bit platform can easily do the shift by
 simply ignoring the low half. */
 
-void blip_add_delta( blip_t* m, unsigned time, int delta )
+void hvl_blip_add_delta( hvl_blip_t* m, unsigned time, int delta )
 {
 	unsigned fixed = (unsigned) ((time * m->factor + m->offset) >> pre_shift);
 	buf_t* out = SAMPLES( m ) + m->avail + (fixed >> frac_bits);
@@ -318,7 +318,7 @@ void blip_add_delta( blip_t* m, unsigned time, int delta )
 	out [15] += in[0]*delta + in[0-half_width]*delta2;
 }
 
-void blip_add_delta_fast( blip_t* m, unsigned time, int delta )
+void hvl_blip_add_delta_fast( hvl_blip_t* m, unsigned time, int delta )
 {
 	unsigned fixed = (unsigned) ((time * m->factor + m->offset) >> pre_shift);
 	buf_t* out = SAMPLES( m ) + m->avail + (fixed >> frac_bits);
